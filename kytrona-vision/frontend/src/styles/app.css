@@ -86,6 +86,7 @@ h2 { margin: 0; font-size: 17px; }
   padding: 12px; border: 1px solid var(--line); border-radius: 8px;
 }
 .tableRow time, .alertRow time { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.tableRow span small, .alertRow div small { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
 .badge { border-radius: 999px; padding: 5px 9px; font-size: 12px; font-weight: 800; text-transform: uppercase; }
 .badge.baixa { background: #e4f5ec; color: var(--green); }
 .badge.media { background: #fff2cf; color: var(--yellow); }
@@ -95,8 +96,8 @@ h2 { margin: 0; font-size: 17px; }
 .cameraGrid.full { margin-top: 0; grid-column: 1 / -1; }
 .liveCard { overflow: hidden; }
 .liveHeader { display: flex; justify-content: space-between; gap: 12px; padding: 14px 16px; align-items: center; }
-.liveHeader strong, .liveHeader span { display: block; }
-.liveHeader span { color: var(--muted); font-size: 13px; margin-top: 3px; }
+.liveHeader strong, .liveHeader span, .liveHeader small { display: block; }
+.liveHeader span, .liveHeader small { color: var(--muted); font-size: 13px; margin-top: 3px; }
 .liveHeader em { font-style: normal; border-radius: 999px; padding: 5px 9px; font-size: 12px; }
 .liveHeader em.online { background: #e4f5ec; color: var(--green); }
 .liveHeader em.offline { background: #eef2f4; color: var(--muted); }
@@ -124,8 +125,15 @@ textarea { min-height: 86px; resize: vertical; padding: 10px 12px; }
 .formFeedback.error { background: #ffe2e2; color: var(--red); }
 .primaryButton {
   border: 0; border-radius: 8px; min-height: 44px; background: var(--green); color: #fff; font-weight: 800;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
 }
 .primaryButton:disabled { opacity: 0.65; cursor: default; }
+.secondaryButton, .dangerIconButton, .statusButton {
+  min-height: 38px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--text);
+  font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 10px;
+}
+.dangerIconButton { color: var(--red); min-width: 40px; padding: 8px; }
+.statusButton.active { background: #e4f5ec; border-color: #b9decf; color: var(--green); }
 .cameraConsole {
   background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
   box-shadow: 0 14px 34px rgba(23, 33, 43, 0.06); display: grid; gap: 14px;
@@ -163,8 +171,55 @@ textarea { min-height: 86px; resize: vertical; padding: 10px 12px; }
 }
 .emptyState { border: 1px dashed var(--line); border-radius: 8px; padding: 12px; }
 .listPanel { min-height: 360px; }
-.zoneItem { display: grid; gap: 5px; border: 1px solid var(--line); border-radius: 8px; padding: 13px; }
+.zonesPage { display: grid; grid-template-columns: 360px 1fr; gap: 18px; align-items: start; }
+.zoneEditor { position: sticky; top: 28px; }
+.zoneEditorGrid, .coordinateGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.coordinatePanel {
+  border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: #f8fbfb; display: grid; gap: 12px;
+}
+.inlineTitle { display: flex; align-items: center; gap: 8px; color: var(--text); }
+.toggleRow {
+  grid-template-columns: auto 1fr; align-items: center; color: var(--text); background: #f8fbfb;
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+}
+.toggleRow input { width: 18px; min-height: 18px; padding: 0; }
+.formActions { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+.zoneWorkspace { display: grid; gap: 18px; min-width: 0; }
+.zoneOverview {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+}
+.zoneOverview h2 { margin-top: 3px; }
+.zoneOverview select { max-width: 240px; }
+.zonePreview {
+  display: grid; grid-template-columns: 260px 1fr; gap: 16px; align-items: center;
+}
+.zonePreviewCopy { display: grid; gap: 4px; }
+.zonePreviewCopy small { color: var(--muted); }
+.zonePreviewStream { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; background: #dfe8eb; }
+.zoneBoard { display: grid; gap: 16px; }
+.zoneGroup {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px;
+  box-shadow: 0 14px 34px rgba(23, 33, 43, 0.06);
+}
+.zoneGroupHeader {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px;
+}
+.zoneGroupHeader strong { display: flex; align-items: center; gap: 8px; }
+.zoneGroupHeader span { color: var(--muted); display: block; margin-top: 4px; }
+.zoneGroupHeader em {
+  font-style: normal; color: var(--green); background: #e4f5ec; border-radius: 999px; padding: 6px 10px; font-weight: 800;
+}
+.zoneItem { display: grid; gap: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 13px; }
+.zoneItem.selected { border-color: #9fcfbd; box-shadow: inset 3px 0 0 var(--green); }
+.zoneItemHeader, .zoneActions {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+}
+.zoneItemHeader strong, .zoneItemHeader span { display: block; }
 .zoneItem span, .zoneItem small { color: var(--muted); }
+.zoneMeta { display: grid; gap: 5px; }
+.zoneMeta span { display: inline-flex; gap: 6px; align-items: center; }
+.compactSelect { gap: 5px; }
+.zoneActions { justify-content: flex-start; }
 .filters { display: flex; gap: 12px; margin-bottom: 16px; }
 .filters select { max-width: 220px; }
 .alertRow { grid-template-columns: auto 1fr auto auto auto; }
@@ -202,7 +257,9 @@ textarea { min-height: 86px; resize: vertical; padding: 10px 12px; }
 
 @media (max-width: 1080px) {
   .metrics, .cameraGrid, .contentGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .splitPage { grid-template-columns: 1fr; }
+  .splitPage, .zonesPage { grid-template-columns: 1fr; }
+  .zoneEditor { position: static; }
+  .zonePreview { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 760px) {
@@ -212,6 +269,8 @@ textarea { min-height: 86px; resize: vertical; padding: 10px 12px; }
   .main { padding: 18px; }
   .topbar { align-items: flex-start; flex-direction: column; }
   .metrics, .cameraGrid, .contentGrid { grid-template-columns: 1fr; }
-  .inlineForm, .ruleItem { grid-template-columns: 1fr; }
+  .inlineForm, .ruleItem, .zoneEditorGrid, .coordinateGrid, .formActions { grid-template-columns: 1fr; }
   .alertRow, .tableRow, .occurrenceTop, .watchlistGrid { grid-template-columns: 1fr; }
+  .zoneOverview { align-items: stretch; flex-direction: column; }
+  .zoneOverview select { max-width: none; }
 }

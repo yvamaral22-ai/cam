@@ -31,6 +31,7 @@ export default function Cameras({ data, refresh }) {
   const [savingDetection, setSavingDetection] = useState(false);
   const [streamVersion, setStreamVersion] = useState(Date.now());
   const hasActiveDetection = detectionRules.some((rule) => rule.active);
+  const zoneCountForCamera = (cameraId) => data.zones.filter((zone) => Number(zone.camera_id) === Number(cameraId)).length;
 
   useEffect(() => {
     api.getDetectionStatus().then(setDetectionStatus).catch(() => {
@@ -305,7 +306,15 @@ export default function Cameras({ data, refresh }) {
         {data.cameras.length === 0 && (
           <div className="emptyState">Nenhuma camera cadastrada. Adicione uma webcam, camera IP, RTSP ou video local para comecar.</div>
         )}
-        {data.cameras.map((camera) => <LiveCamera key={camera.id} camera={camera} onOpen={openCamera} onDelete={deleteCamera} />)}
+        {data.cameras.map((camera) => (
+          <LiveCamera
+            key={camera.id}
+            camera={camera}
+            zoneCount={zoneCountForCamera(camera.id)}
+            onOpen={openCamera}
+            onDelete={deleteCamera}
+          />
+        ))}
       </div>
     </section>
   );

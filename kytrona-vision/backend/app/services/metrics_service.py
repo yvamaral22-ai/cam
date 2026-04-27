@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from collections import Counter
 
 from app.database import get_db
@@ -8,10 +9,23 @@ from app.database import get_db
 class MetricsService:
     def record_frame(self, camera_id: int, people_count: int, zone_id: int | None = None, avg_dwell_seconds: float = 0) -> None:
         with get_db() as conn:
-            conn.execute(
-                "INSERT INTO metrics (camera_id, zone_id, people_count, avg_dwell_seconds) VALUES (?, ?, ?, ?)",
-                (camera_id, zone_id, people_count, avg_dwell_seconds),
-            )
+            camera_exists = conn.execute("SELECT 1 FROM cameras WHERE id=?", (camera_id,)).fetchone()
+            if not camera_exists:
+                return
+
+            if zone_id is not None:
+                zone_exists = conn.execute("SELECT 1 FROM zones WHERE id=? AND camera_id=?", (zone_id, camera_id)).fetchone()
+                if not zone_exists:
+                    zone_id = None
+
+            try:
+                conn.execute(
+                    "INSERT INTO metrics (camera_id, zone_id, people_count, avg_dwell_seconds) VALUES (?, ?, ?, ?)",
+                    (camera_id, zone_id, people_count, avg_dwell_seconds),
+                )
+            except sqlite3.IntegrityError:
+                # A camera/zone can be removed while an active stream still emits frames.
+                return
 
     def overview(self) -> dict:
         with get_db() as conn:

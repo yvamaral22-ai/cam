@@ -30,6 +30,7 @@ export const api = {
   getCameras: () => request('/cameras'),
   createCamera: (payload) => request('/cameras', { method: 'POST', body: JSON.stringify(payload) }),
   deleteCamera: (id) => request(`/cameras/${id}`, { method: 'DELETE' }),
+  updateCamera: (id, payload) => request(`/cameras/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   getCameraControls: (id) => request(`/cameras/${id}/controls`),
   updateCameraControls: (id, payload) => request(`/cameras/${id}/controls`, { method: 'PUT', body: JSON.stringify(payload) }),
   startRecording: (id) => request(`/cameras/${id}/recording/start`, { method: 'POST' }),
@@ -41,6 +42,8 @@ export const api = {
   deleteCameraDetection: (cameraId, ruleId) => request(`/cameras/${cameraId}/detections/${ruleId}`, { method: 'DELETE' }),
   getZones: () => request('/zones'),
   createZone: (payload) => request('/zones', { method: 'POST', body: JSON.stringify(payload) }),
+  updateZone: (id, payload) => request(`/zones/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteZone: (id) => request(`/zones/${id}`, { method: 'DELETE' }),
   getAlerts: (filters = {}) => {
     const params = new URLSearchParams(Object.entries(filters).filter(([, value]) => value));
     return request(`/alerts${params.toString() ? `?${params}` : ''}`);

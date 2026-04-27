@@ -19,6 +19,11 @@ const initialForm = {
 export default function Occurrences({ data, refresh }) {
   const [filters, setFilters] = useState({ type: '', severity: '', status: '' });
   const [form, setForm] = useState({ ...initialForm, camera_id: data.cameras[0]?.id || 1 });
+  const camerasById = useMemo(() => new Map(data.cameras.map((camera) => [Number(camera.id), camera])), [data.cameras]);
+  const zonesById = useMemo(() => new Map(data.zones.map((zone) => [Number(zone.id), zone])), [data.zones]);
+  const formZones = useMemo(() => {
+    return data.zones.filter((zone) => String(zone.camera_id) === String(form.camera_id));
+  }, [data.zones, form.camera_id]);
 
   const occurrences = useMemo(() => data.occurrences.filter((item) => {
     return (!filters.type || item.type === filters.type)
@@ -72,14 +77,14 @@ export default function Occurrences({ data, refresh }) {
           </select>
         </label>
         <label>Camera
-          <select value={form.camera_id} onChange={(e) => setForm({ ...form, camera_id: e.target.value })}>
+          <select value={form.camera_id} onChange={(e) => setForm({ ...form, camera_id: e.target.value, zone_id: '' })}>
             {data.cameras.map((camera) => <option value={camera.id} key={camera.id}>{camera.name}</option>)}
           </select>
         </label>
         <label>Zona
           <select value={form.zone_id} onChange={(e) => setForm({ ...form, zone_id: e.target.value })}>
             <option value="">Sem zona</option>
-            {data.zones.map((zone) => <option value={zone.id} key={zone.id}>{zone.name}</option>)}
+            {formZones.map((zone) => <option value={zone.id} key={zone.id}>{zone.name}</option>)}
           </select>
         </label>
         <label>Descricao<textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
@@ -142,7 +147,8 @@ export default function Occurrences({ data, refresh }) {
                 <p>{item.description}</p>
                 <div className="evidenceLine">
                   <span>Status: {item.status.replaceAll('_', ' ')}</span>
-                  <span>Camera #{item.camera_id}</span>
+                  <span>{camerasById.get(Number(item.camera_id))?.name || `Camera #${item.camera_id}`}</span>
+                  {item.zone_id && <span>{zonesById.get(Number(item.zone_id))?.name || `Zona #${item.zone_id}`}</span>}
                   {item.snapshot_path && <span>Imagem: {item.snapshot_path}</span>}
                   {item.video_clip_path && <span>Video: {item.video_clip_path}</span>}
                 </div>

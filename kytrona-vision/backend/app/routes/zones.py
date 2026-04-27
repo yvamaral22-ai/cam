@@ -15,6 +15,13 @@ def zone_dict(row) -> dict:
     return data
 
 
+def ensure_camera(camera_id: int) -> None:
+    with get_db() as conn:
+        exists = conn.execute("SELECT 1 FROM cameras WHERE id=?", (camera_id,)).fetchone()
+    if not exists:
+        raise HTTPException(404, "Camera da zona nao encontrada")
+
+
 @router.get("")
 def list_zones():
     with get_db() as conn:
@@ -23,6 +30,7 @@ def list_zones():
 
 @router.post("", status_code=201)
 def create_zone(payload: ZoneCreate):
+    ensure_camera(payload.camera_id)
     with get_db() as conn:
         cursor = conn.execute(
             """
@@ -57,6 +65,8 @@ def get_zone(zone_id: int):
 @router.put("/{zone_id}")
 def update_zone(zone_id: int, payload: ZoneUpdate):
     data = payload.model_dump(exclude_unset=True)
+    if "camera_id" in data:
+        ensure_camera(data["camera_id"])
     if "coordinates" in data:
         data["coordinates"] = json.dumps(data["coordinates"])
     if "active" in data:

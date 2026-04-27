@@ -1,6 +1,7 @@
 export default function Reports({ data }) {
   const movement = data.zones.map((zone, index) => ({
     name: zone.name,
+    camera: data.cameras.find((camera) => Number(camera.id) === Number(zone.camera_id))?.name || `Camera #${zone.camera_id}`,
     value: 38 + index * 17,
   }));
 
@@ -22,10 +23,11 @@ export default function Reports({ data }) {
         <div className="horizontalBars">
           {movement.map((item) => (
             <div key={item.name}>
-              <span>{item.name}</span>
+              <span>{item.name} | {item.camera}</span>
               <div><i style={{ width: `${Math.min(item.value, 100)}%` }} /></div>
             </div>
           ))}
+          {movement.length === 0 && <div className="emptyState">Sem zonas cadastradas para consolidar movimentacao.</div>}
         </div>
       </article>
       <article className="panel wide">

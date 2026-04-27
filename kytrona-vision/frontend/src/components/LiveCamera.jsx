@@ -1,13 +1,14 @@
 import { api } from '../api/client';
 import { Trash2 } from 'lucide-react';
 
-export default function LiveCamera({ camera, onOpen, onDelete }) {
+export default function LiveCamera({ camera, onOpen, onDelete, zoneCount }) {
   return (
     <article className="liveCard">
       <div className="liveHeader">
         <div>
           <strong>{camera.name}</strong>
           <span>{camera.location || 'Sem localizacao'}</span>
+          {typeof zoneCount === 'number' && <small>{zoneCount} zonas vinculadas</small>}
         </div>
         <em className={camera.status === 'online' ? 'online' : 'offline'}>{camera.status}</em>
       </div>

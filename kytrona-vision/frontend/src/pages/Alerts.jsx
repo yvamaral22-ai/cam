@@ -5,12 +5,17 @@ import SeverityBadge from '../components/SeverityBadge.jsx';
 export default function Alerts({ data, refresh }) {
   const [severity, setSeverity] = useState('');
   const [cameraId, setCameraId] = useState('');
+  const [zoneId, setZoneId] = useState('');
+
+  const camerasById = useMemo(() => new Map(data.cameras.map((camera) => [Number(camera.id), camera])), [data.cameras]);
+  const zonesById = useMemo(() => new Map(data.zones.map((zone) => [Number(zone.id), zone])), [data.zones]);
 
   const alerts = useMemo(() => data.alerts.filter((alert) => {
     const severityOk = !severity || alert.severity === severity;
     const cameraOk = !cameraId || String(alert.camera_id) === String(cameraId);
-    return severityOk && cameraOk;
-  }), [data.alerts, severity, cameraId]);
+    const zoneOk = !zoneId || String(alert.zone_id) === String(zoneId);
+    return severityOk && cameraOk && zoneOk;
+  }), [data.alerts, severity, cameraId, zoneId]);
 
   async function resolve(id) {
     await api.resolveAlert(id);
@@ -36,6 +41,10 @@ export default function Alerts({ data, refresh }) {
           <option value="">Todas cameras</option>
           {data.cameras.map((camera) => <option value={camera.id} key={camera.id}>{camera.name}</option>)}
         </select>
+        <select value={zoneId} onChange={(e) => setZoneId(e.target.value)}>
+          <option value="">Todas zonas</option>
+          {data.zones.map((zone) => <option value={zone.id} key={zone.id}>{zone.name}</option>)}
+        </select>
       </div>
       <div className="alertTable">
         {alerts.map((alert) => (
@@ -44,6 +53,10 @@ export default function Alerts({ data, refresh }) {
             <div>
               <strong>{alert.type}</strong>
               <span>{alert.message}</span>
+              <small>
+                {camerasById.get(Number(alert.camera_id))?.name || `Camera #${alert.camera_id}`}
+                {alert.zone_id ? ` | ${zonesById.get(Number(alert.zone_id))?.name || `Zona #${alert.zone_id}`}` : ' | Sem zona'}
+              </small>
             </div>
             <time>{new Date(alert.timestamp).toLocaleString('pt-BR')}</time>
             <button onClick={() => convert(alert.id)}>Virar ocorrencia</button>

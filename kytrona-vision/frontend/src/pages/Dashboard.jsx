@@ -6,6 +6,8 @@ import SeverityBadge from '../components/SeverityBadge.jsx';
 export default function Dashboard({ data }) {
   const overview = data.overview || {};
   const maxHour = Math.max(...(overview.alerts_by_hour || []).map((item) => item.total), 1);
+  const camerasById = new Map(data.cameras.map((camera) => [Number(camera.id), camera]));
+  const zonesById = new Map(data.zones.map((zone) => [Number(zone.id), zone]));
 
   return (
     <section className="pageGrid">
@@ -54,7 +56,7 @@ export default function Dashboard({ data }) {
             {(data.alerts || []).slice(0, 6).map((alert) => (
               <div className="tableRow" key={alert.id}>
                 <SeverityBadge severity={alert.severity} />
-                <span>{alert.message}</span>
+                <span>{alert.message}<small>{camerasById.get(Number(alert.camera_id))?.name || `Camera #${alert.camera_id}`}</small></span>
                 <time>{new Date(alert.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</time>
               </div>
             ))}
@@ -67,7 +69,13 @@ export default function Dashboard({ data }) {
             {(overview.recent_occurrences || []).map((occurrence) => (
               <div className="tableRow" key={occurrence.id}>
                 <SeverityBadge severity={occurrence.severity} />
-                <span>{occurrence.description}</span>
+                <span>
+                  {occurrence.description}
+                  <small>
+                    {camerasById.get(Number(occurrence.camera_id))?.name || `Camera #${occurrence.camera_id}`}
+                    {occurrence.zone_id ? ` | ${zonesById.get(Number(occurrence.zone_id))?.name || `Zona #${occurrence.zone_id}`}` : ''}
+                  </small>
+                </span>
                 <time>{new Date(occurrence.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</time>
               </div>
             ))}
@@ -76,7 +84,13 @@ export default function Dashboard({ data }) {
       </div>
 
       <div className="cameraGrid">
-        {data.cameras.slice(0, 2).map((camera) => <LiveCamera key={camera.id} camera={camera} />)}
+        {data.cameras.slice(0, 2).map((camera) => (
+          <LiveCamera
+            key={camera.id}
+            camera={camera}
+            zoneCount={data.zones.filter((zone) => Number(zone.camera_id) === Number(camera.id)).length}
+          />
+        ))}
       </div>
     </section>
   );
