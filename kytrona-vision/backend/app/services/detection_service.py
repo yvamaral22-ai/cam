@@ -22,6 +22,7 @@ class DetectionService:
     def __init__(self) -> None:
         self.settings = get_settings()
         self.model: Any | None = None
+        self.load_error: str | None = None
         self._load_model()
 
     def _load_model(self) -> None:
@@ -30,8 +31,18 @@ class DetectionService:
 
             self.model = YOLO(self.settings.yolo_model)
         except Exception as exc:
+            self.load_error = str(exc)
             print(f"[KYTRONA] YOLO indisponivel, usando modo demonstrativo: {exc}")
             self.model = None
+
+    def status(self) -> dict:
+        return {
+            "model": self.settings.yolo_model,
+            "available": self.model is not None,
+            "mode": "yolo" if self.model is not None else "demo_without_yolo",
+            "message": "Deteccao de pessoas ativa." if self.model is not None else "Deteccao de pessoas indisponivel. Instale Ultralytics/YOLO no Python do backend.",
+            "error": self.load_error,
+        }
 
     def detect_people(self, frame) -> list[Detection]:
         if self.model is None:
@@ -54,9 +65,9 @@ class DetectionService:
         return detections
 
     @staticmethod
-    def draw(frame, detections: list[Detection]) -> None:
+    def draw(frame, detections: list[Detection], label: str = "Pessoa") -> None:
         for detection in detections:
             x1, y1, x2, y2 = detection.bbox
-            label = f"Pessoa #{detection.track_id or '-'} {detection.confidence:.0%}"
+            text = f"{label} #{detection.track_id or '-'} {detection.confidence:.0%}"
             cv2.rectangle(frame, (x1, y1), (x2, y2), (32, 143, 93), 2)
-            cv2.putText(frame, label, (x1, max(20, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (32, 143, 93), 2)
+            cv2.putText(frame, text, (x1, max(20, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (32, 143, 93), 2)

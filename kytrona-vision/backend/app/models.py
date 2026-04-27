@@ -4,6 +4,7 @@ from enum import StrEnum
 class CameraType(StrEnum):
     webcam = "webcam"
     video_file = "video_file"
+    ip_camera = "ip_camera"
     rtsp = "rtsp"
 
 

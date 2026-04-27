@@ -9,7 +9,7 @@ from app.models import AlertSeverity, AlertStatus, CameraStatus, CameraType, Occ
 class CameraBase(BaseModel):
     name: str = Field(..., examples=["Webcam Local"])
     type: CameraType
-    source: str = Field(..., examples=["0", "videos/exemplo.mp4", "rtsp://usuario:senha@ip/stream"])
+    source: str = Field(..., examples=["0", "videos/exemplo.mp4", "http://192.168.0.20:8080/video", "rtsp://usuario:senha@ip/stream"])
     status: CameraStatus = CameraStatus.offline
     location: str | None = None
 
@@ -29,6 +29,18 @@ class CameraUpdate(BaseModel):
 class Camera(CameraBase):
     id: int
     created_at: datetime
+
+
+class CameraDetectionRuleCreate(BaseModel):
+    label: str = Field(..., examples=["Pessoa"])
+    target_class: str = Field("person", examples=["person"])
+    active: bool = True
+
+
+class CameraDetectionRuleUpdate(BaseModel):
+    label: str | None = None
+    target_class: str | None = None
+    active: bool | None = None
 
 
 class ZoneBase(BaseModel):

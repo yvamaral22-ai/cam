@@ -8,7 +8,15 @@ async function request(path, options = {}) {
   });
 
   if (!response.ok) {
-    throw new Error(`Erro ${response.status} em ${path}`);
+    const body = await response.text();
+    let detail = body;
+    try {
+      const parsed = JSON.parse(body);
+      detail = parsed.detail || parsed.error || body;
+    } catch {
+      detail = body;
+    }
+    throw new Error(`Erro ${response.status} em ${path}${detail ? `: ${detail}` : ''}`);
   }
 
   if (response.status === 204) {
@@ -21,6 +29,16 @@ async function request(path, options = {}) {
 export const api = {
   getCameras: () => request('/cameras'),
   createCamera: (payload) => request('/cameras', { method: 'POST', body: JSON.stringify(payload) }),
+  deleteCamera: (id) => request(`/cameras/${id}`, { method: 'DELETE' }),
+  getCameraControls: (id) => request(`/cameras/${id}/controls`),
+  updateCameraControls: (id, payload) => request(`/cameras/${id}/controls`, { method: 'PUT', body: JSON.stringify(payload) }),
+  startRecording: (id) => request(`/cameras/${id}/recording/start`, { method: 'POST' }),
+  stopRecording: (id) => request(`/cameras/${id}/recording/stop`, { method: 'POST' }),
+  getDetectionStatus: () => request('/cameras/detection/status'),
+  getCameraDetections: (id) => request(`/cameras/${id}/detections`),
+  createCameraDetection: (id, payload) => request(`/cameras/${id}/detections`, { method: 'POST', body: JSON.stringify(payload) }),
+  updateCameraDetection: (cameraId, ruleId, payload) => request(`/cameras/${cameraId}/detections/${ruleId}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteCameraDetection: (cameraId, ruleId) => request(`/cameras/${cameraId}/detections/${ruleId}`, { method: 'DELETE' }),
   getZones: () => request('/zones'),
   createZone: (payload) => request('/zones', { method: 'POST', body: JSON.stringify(payload) }),
   getAlerts: (filters = {}) => {
@@ -39,5 +57,5 @@ export const api = {
   getWatchlist: () => request('/watchlist'),
   getOverview: () => request('/analytics/overview'),
   getCashiersRanking: () => request('/analytics/cashiers-ranking'),
-  streamUrl: (cameraId) => `${API_URL}/stream/${cameraId}`,
+  streamUrl: (cameraId, version = '') => `${API_URL}/stream/${cameraId}${version ? `?v=${version}` : ''}`,
 };

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from app.config import get_settings
-from app.database import init_db, seed_data
+from app.database import cleanup_legacy_seed_data, init_db, seed_data
 from app.routes import alerts, analytics, cameras, occurrences, watchlist, zones
 from app.services.video_processor import video_processor
 from app.websocket import manager
@@ -33,6 +33,7 @@ def startup() -> None:
     settings.videos_dir.mkdir(exist_ok=True)
     init_db()
     seed_data()
+    cleanup_legacy_seed_data()
 
 
 @app.get("/health")

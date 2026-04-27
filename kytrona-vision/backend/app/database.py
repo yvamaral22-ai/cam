@@ -17,6 +17,7 @@ def _db_path() -> Path:
 def get_db() -> Iterator[sqlite3.Connection]:
     conn = sqlite3.connect(_db_path(), check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     try:
         yield conn
         conn.commit()
@@ -48,6 +49,16 @@ def init_db() -> None:
                 people_limit INTEGER DEFAULT 4,
                 schedule_start TEXT DEFAULT '08:00',
                 schedule_end TEXT DEFAULT '18:00',
+                active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(camera_id) REFERENCES cameras(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS camera_detection_rules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                camera_id INTEGER NOT NULL,
+                label TEXT NOT NULL,
+                target_class TEXT NOT NULL DEFAULT 'person',
                 active INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(camera_id) REFERENCES cameras(id) ON DELETE CASCADE
@@ -115,73 +126,30 @@ def init_db() -> None:
 
 
 def seed_data() -> None:
-    with get_db() as conn:
-        camera_count = conn.execute("SELECT COUNT(*) AS total FROM cameras").fetchone()["total"]
-        if camera_count:
-            return
+    # O MVP inicia sem cameras automaticas: a tela deve exibir apenas cameras cadastradas pelo usuario.
+    return
 
-        conn.execute(
-            "INSERT INTO cameras (name, type, source, status, location) VALUES (?, ?, ?, ?, ?)",
-            ("Webcam Local", "webcam", "0", "offline", "Entrada principal"),
-        )
-        conn.execute(
-            "INSERT INTO cameras (name, type, source, status, location) VALUES (?, ?, ?, ?, ?)",
-            ("Video de Teste Local", "video_file", "videos/exemplo.mp4", "offline", "Arquivo demonstrativo"),
-        )
-        conn.execute(
-            """
-            INSERT INTO zones
-            (name, camera_id, type, coordinates, time_limit_seconds, people_limit, schedule_start, schedule_end, active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            ("Caixa 1", 1, "caixa", '{"x":8,"y":48,"w":34,"h":42,"unit":"percent"}', 180, 3, "08:00", "22:00", 1),
-        )
-        conn.execute(
-            """
-            INSERT INTO zones
-            (name, camera_id, type, coordinates, time_limit_seconds, people_limit, schedule_start, schedule_end, active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            ("Estoque Restrito", 1, "area_restrita", '{"x":58,"y":18,"w":34,"h":56,"unit":"percent"}', 60, 1, "08:00", "18:00", 1),
-        )
-        conn.execute(
-            """
-            INSERT INTO alerts (camera_id, zone_id, type, severity, message, status)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (1, 2, "area_restrita", "alta", "Movimento detectado no Estoque Restrito fora do horario permitido.", "novo"),
-        )
-        conn.execute(
-            """
-            INSERT INTO occurrences
-            (type, severity, camera_id, zone_id, description, status, registered_by, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                "acesso_indevido",
-                "alta",
-                1,
-                2,
-                "Registro manual de movimento em area restrita apos o horario permitido.",
-                "em_analise",
-                "Supervisor",
-                "Evidencia operacional sem identificacao biometrica.",
-            ),
-        )
-        conn.execute(
-            """
-            INSERT INTO watchlist_items
-            (title, type, severity, description, camera_id, zone_id, active, instructions)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                "Acesso ao estoque fora do horario",
-                "comportamento",
-                "alta",
-                "Acompanhar movimento manualmente na zona Estoque Restrito apos 18:00.",
-                1,
-                2,
-                1,
-                "Registrar ocorrencia se houver evidencia operacional. Nao usar biometria.",
-            ),
-        )
+
+def cleanup_legacy_seed_data() -> None:
+    legacy_cameras = [
+        ("Webcam Local", "webcam", "0", "Entrada principal"),
+        ("Video de Teste Local", "video_file", "videos/exemplo.mp4", "Arquivo demonstrativo"),
+        ("Camera IP da Rede", "ip_camera", "http://192.168.0.20:8080/video", "Rede local"),
+    ]
+    with get_db() as conn:
+        for name, camera_type, source, location in legacy_cameras:
+            rows = conn.execute(
+                """
+                SELECT id FROM cameras
+                WHERE name=? AND type=? AND source=? AND COALESCE(location, '')=?
+                """,
+                (name, camera_type, source, location),
+            ).fetchall()
+            for row in rows:
+                camera_id = row["id"]
+                conn.execute("DELETE FROM camera_detection_rules WHERE camera_id=?", (camera_id,))
+                conn.execute("DELETE FROM metrics WHERE camera_id=?", (camera_id,))
+                conn.execute("DELETE FROM alerts WHERE camera_id=?", (camera_id,))
+                conn.execute("DELETE FROM occurrences WHERE camera_id=?", (camera_id,))
+                conn.execute("DELETE FROM zones WHERE camera_id=?", (camera_id,))
+                conn.execute("DELETE FROM cameras WHERE id=?", (camera_id,))

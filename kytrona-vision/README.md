@@ -39,26 +39,39 @@ kytrona-vision/
 
 ## Backend
 
+Recomendado: Python 3.11 ou 3.12. Python 3.13/3.14 pode ter incompatibilidades com OpenCV, NumPy ou Ultralytics dependendo das wheels disponiveis.
+
 ```powershell
 cd backend
 python -m venv venv
 venv\Scripts\activate
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 python run.py
+```
+
+No Windows, tambem existe um setup rapido:
+
+```powershell
+cd backend
+.\setup_backend.ps1
 ```
 
 API local: `http://localhost:8000`
 
 Documentacao FastAPI: `http://localhost:8000/docs`
 
-O banco SQLite `kytrona.db` e criado automaticamente. Na primeira inicializacao, o sistema cria:
+O banco SQLite `kytrona.db` e criado automaticamente. Ele inicia sem cameras cadastradas: a tela mostra apenas cameras criadas por voce.
 
-- camera `Webcam Local` com source `0`
-- camera `Video de Teste Local` apontando para `videos/exemplo.mp4`
-- zona `Caixa 1`
-- zona `Estoque Restrito`
-- alerta demonstrativo
-- ocorrencia demonstrativa sem biometria
+Zonas, identificacoes e watchlist nao sao criadas automaticamente. Elas aparecem no video somente depois que voce cadastrar. Exemplo: crie uma camera chamada `Corredor 1`, abra `Operar camera`, adicione a identificacao `Pessoa`, e entao essa camera passa a buscar pessoas.
+
+Se voce ja rodou uma versao anterior que criou cameras de exemplo, limpe o banco antigo:
+
+```powershell
+cd backend
+del kytrona.db
+python run.py
+```
 
 Para testar video local, coloque um arquivo em:
 
@@ -138,7 +151,7 @@ Video e tempo real:
 
 ## Como funciona
 
-O `video_processor.py` abre webcam, arquivo local ou RTSP com OpenCV. Quando YOLO esta disponivel, `detection_service.py` detecta somente a classe `person`. Se nao houver camera ou modelo disponivel, o sistema gera frames demonstrativos para o dashboard nao quebrar.
+O `video_processor.py` abre webcam, arquivo local, camera IP na rede ou RTSP com OpenCV. Para cameras IP, normalmente voce precisa informar a URL do stream, por exemplo `http://192.168.0.20:8080/video`, `http://192.168.0.30/mjpeg` ou `rtsp://usuario:senha@192.168.0.40:554/stream1`. Quando YOLO esta disponivel, `detection_service.py` detecta somente a classe `person`. Se nao houver camera ou modelo disponivel, o sistema gera frames demonstrativos para o dashboard nao quebrar.
 
 O `tracking_service.py` mantem IDs temporarios anonimos entre frames e calcula permanencia por zona. O `alert_service.py` cria alertas comportamentais por area proibida, permanencia acima do limite, movimento fora do horario, fila/aglomeracao e entrada em zona critica.
 

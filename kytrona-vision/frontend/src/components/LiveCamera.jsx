@@ -1,6 +1,7 @@
 import { api } from '../api/client';
+import { Trash2 } from 'lucide-react';
 
-export default function LiveCamera({ camera }) {
+export default function LiveCamera({ camera, onOpen, onDelete }) {
   return (
     <article className="liveCard">
       <div className="liveHeader">
@@ -11,6 +12,14 @@ export default function LiveCamera({ camera }) {
         <em className={camera.status === 'online' ? 'online' : 'offline'}>{camera.status}</em>
       </div>
       <img className="stream" src={api.streamUrl(camera.id)} alt={`Stream processado de ${camera.name}`} />
+      <div className="cardActions">
+        {onOpen && <button className="operateButton" onClick={() => onOpen(camera)}>Operar camera</button>}
+        {onDelete && (
+          <button className="deleteButton" title="Excluir camera" onClick={() => onDelete(camera)}>
+            <Trash2 size={17} />
+          </button>
+        )}
+      </div>
     </article>
   );
 }

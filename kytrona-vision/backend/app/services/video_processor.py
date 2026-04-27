@@ -12,6 +12,7 @@ import numpy as np
 from app.database import get_db
 from app.schemas import AlertCreate
 from app.services.alert_service import AlertService
+from app.services.camera_control_service import camera_controls
 from app.services.detection_service import Detection, DetectionService
 from app.services.metrics_service import MetricsService
 from app.services.tracking_service import AnonymousTrackingService
@@ -31,6 +32,8 @@ class VideoProcessor:
         frame_index = 0
 
         while True:
+            detection_rule = self._active_detection_rule(camera_id)
+            controls = camera_controls.get(camera_id)
             ok, frame = (False, None)
             if capture and capture.isOpened():
                 ok, frame = capture.read()
@@ -40,17 +43,27 @@ class VideoProcessor:
 
             if not ok or frame is None:
                 frame = self._mock_frame(camera_id, frame_index)
-                detections = self._mock_detections(frame, frame_index)
+                frame = self._apply_zoom(frame, controls["zoom"])
+                detections = self._mock_detections(frame, frame_index) if detection_rule else []
             else:
-                detections = self.detector.detect_people(frame)
+                frame = self._apply_zoom(frame, controls["zoom"])
+                detections = self.detector.detect_people(frame) if detection_rule else []
 
+            if controls["recording_requested"] and not controls["recording"]:
+                controls = camera_controls.start_recording(camera_id, frame.shape)
             frame_index += 1
             tracked = self.tracker.update(detections)
             zones = self._zones_for_camera(camera_id)
             await self._process_zones(camera_id, frame, zones, tracked)
-            self.detector.draw(frame, tracked)
+            if detection_rule:
+                self.detector.draw(frame, tracked, detection_rule["label"])
+            if detection_rule and self.detector.model is None and ok:
+                self._draw_detection_warning(frame, detection_rule["label"])
             self._draw_zones(frame, zones)
+            self._draw_control_status(frame, controls)
             self._draw_hud(frame, camera, len(tracked))
+            if controls["recording"]:
+                camera_controls.write_frame(camera_id, frame)
 
             if frame_index % 20 == 0:
                 self.metrics.record_frame(camera_id, len(tracked))
@@ -63,6 +76,19 @@ class VideoProcessor:
     def _get_camera(camera_id: int):
         with get_db() as conn:
             return conn.execute("SELECT * FROM cameras WHERE id=?", (camera_id,)).fetchone()
+
+    @staticmethod
+    def _active_detection_rule(camera_id: int) -> dict | None:
+        with get_db() as conn:
+            row = conn.execute(
+                """
+                SELECT * FROM camera_detection_rules
+                WHERE camera_id=? AND active=1 AND target_class='person'
+                ORDER BY id DESC LIMIT 1
+                """,
+                (camera_id,),
+            ).fetchone()
+        return dict(row) if row else None
 
     @staticmethod
     def _zones_for_camera(camera_id: int) -> list[dict]:
@@ -178,7 +204,41 @@ class VideoProcessor:
     def _draw_hud(frame, camera, people_count: int) -> None:
         title = camera["name"] if camera else "Camera demonstrativa"
         cv2.rectangle(frame, (0, 0), (frame.shape[1], 48), (20, 31, 43), -1)
-        cv2.putText(frame, f"KYTRONA VISION | {title} | Pessoas: {people_count}", (18, 31), cv2.FONT_HERSHEY_SIMPLEX, 0.72, (245, 248, 250), 2)
+        cv2.putText(frame, f"KYTRONA VISION | {title} | Deteccoes: {people_count}", (18, 31), cv2.FONT_HERSHEY_SIMPLEX, 0.72, (245, 248, 250), 2)
+
+    @staticmethod
+    def _draw_control_status(frame, controls: dict) -> None:
+        labels = []
+        if controls["zoom"] > 1:
+            labels.append(f"Zoom {controls['zoom']:.1f}x")
+        if controls["recording"]:
+            labels.append("REC")
+        if controls["audio_enabled"]:
+            labels.append("Audio ON")
+        if controls["microphone_enabled"]:
+            labels.append("Mic ON")
+        if labels:
+            text = " | ".join(labels)
+            cv2.rectangle(frame, (0, frame.shape[0] - 38), (frame.shape[1], frame.shape[0]), (20, 31, 43), -1)
+            cv2.putText(frame, text, (18, frame.shape[0] - 13), cv2.FONT_HERSHEY_SIMPLEX, 0.62, (245, 248, 250), 2)
+
+    @staticmethod
+    def _draw_detection_warning(frame, label: str) -> None:
+        text = f"{label} ativa | deteccao indisponivel no backend"
+        cv2.rectangle(frame, (0, 50), (frame.shape[1], 86), (31, 70, 93), -1)
+        cv2.putText(frame, text, (18, 74), cv2.FONT_HERSHEY_SIMPLEX, 0.62, (245, 248, 250), 2)
+
+    @staticmethod
+    def _apply_zoom(frame, zoom: float):
+        if zoom <= 1:
+            return frame
+        height, width = frame.shape[:2]
+        crop_w = int(width / zoom)
+        crop_h = int(height / zoom)
+        x1 = max(0, (width - crop_w) // 2)
+        y1 = max(0, (height - crop_h) // 2)
+        cropped = frame[y1 : y1 + crop_h, x1 : x1 + crop_w]
+        return cv2.resize(cropped, (width, height), interpolation=cv2.INTER_LINEAR)
 
     @staticmethod
     def _mock_frame(camera_id: int, frame_index: int):
