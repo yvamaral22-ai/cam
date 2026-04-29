@@ -124,8 +124,11 @@ def update_camera(camera_id: int, payload: CameraUpdate):
 
 @router.delete("/{camera_id}", status_code=204)
 def delete_camera(camera_id: int):
+    camera_controls.remove(camera_id)
     with get_db() as conn:
-        conn.execute("DELETE FROM cameras WHERE id=?", (camera_id,))
+        cursor = conn.execute("DELETE FROM cameras WHERE id=?", (camera_id,))
+        if cursor.rowcount == 0:
+            raise HTTPException(404, "Camera nao encontrada")
 
 
 @router.get("/{camera_id}/controls")

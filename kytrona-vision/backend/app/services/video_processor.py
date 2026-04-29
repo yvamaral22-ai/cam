@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
 from datetime import datetime
 from typing import AsyncGenerator
@@ -30,47 +31,76 @@ class VideoProcessor:
         camera = self._get_camera(camera_id)
         capture = self._open_capture(camera) if camera else None
         frame_index = 0
+        failed_reads = 0
+        next_reconnect_at = 0.0
 
-        while True:
-            detection_rule = self._active_detection_rule(camera_id)
-            controls = camera_controls.get(camera_id)
-            ok, frame = (False, None)
-            if capture and capture.isOpened():
-                ok, frame = capture.read()
-                if not ok and camera and camera["type"] == "video_file":
-                    capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        try:
+            while True:
+                camera = self._refresh_camera(camera_id, camera, capture)
+                if not camera:
+                    break
+                now = time.time()
+                if camera and (not capture or not capture.isOpened()) and now >= next_reconnect_at:
+                    capture = self._open_capture(camera)
+                    if not capture or not capture.isOpened():
+                        self._release_capture(capture)
+                        capture = None
+                        next_reconnect_at = now + 3
+
+                detection_rule = self._active_detection_rule(camera_id)
+                controls = camera_controls.get(camera_id)
+                ok, frame = (False, None)
+                if capture and capture.isOpened():
                     ok, frame = capture.read()
+                    if not ok and camera and camera["type"] == "video_file":
+                        capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                        ok, frame = capture.read()
 
-            if not ok or frame is None:
-                frame = self._mock_frame(camera_id, frame_index)
-                frame = self._apply_zoom(frame, controls["zoom"])
-                detections = self._mock_detections(frame, frame_index) if detection_rule else []
-            else:
-                frame = self._apply_zoom(frame, controls["zoom"])
-                detections = self.detector.detect_people(frame) if detection_rule else []
+                if ok and frame is not None:
+                    failed_reads = 0
+                    frame = self._apply_zoom(frame, controls["zoom"])
+                    detections = self.detector.detect_people(frame) if detection_rule else []
+                else:
+                    failed_reads += 1
+                    if camera and camera["type"] != "video_file":
+                        now = time.time()
+                        if failed_reads >= 10 and now >= next_reconnect_at:
+                            self._release_capture(capture)
+                            capture = self._open_capture(camera)
+                            if not capture or not capture.isOpened():
+                                self._release_capture(capture)
+                                capture = None
+                            next_reconnect_at = now + 3
+                            failed_reads = 0
+                    message = "Reconectando ao stream DSS/RTSP" if camera else "Camera nao cadastrada"
+                    frame = self._mock_frame(camera_id, frame_index, camera, message)
+                    frame = self._apply_zoom(frame, controls["zoom"])
+                    detections = self._mock_detections(frame, frame_index) if detection_rule else []
 
-            if controls["recording_requested"] and not controls["recording"]:
-                controls = camera_controls.start_recording(camera_id, frame.shape)
-            frame_index += 1
-            tracked = self.tracker.update(detections)
-            zones = self._zones_for_camera(camera_id)
-            await self._process_zones(camera_id, frame, zones, tracked)
-            if detection_rule:
-                self.detector.draw(frame, tracked, detection_rule["label"])
-            if detection_rule and self.detector.model is None and ok:
-                self._draw_detection_warning(frame, detection_rule["label"])
-            self._draw_zones(frame, zones)
-            self._draw_control_status(frame, controls)
-            self._draw_hud(frame, camera, len(tracked))
-            if controls["recording"]:
-                camera_controls.write_frame(camera_id, frame)
+                if controls["recording_requested"] and not controls["recording"]:
+                    controls = camera_controls.start_recording(camera_id, frame.shape)
+                frame_index += 1
+                tracked = self.tracker.update(detections)
+                zones = self._zones_for_camera(camera_id)
+                await self._process_zones(camera_id, frame, zones, tracked)
+                if detection_rule:
+                    self.detector.draw(frame, tracked, detection_rule["label"])
+                if detection_rule and self.detector.model is None and ok:
+                    self._draw_detection_warning(frame, detection_rule["label"])
+                self._draw_zones(frame, zones)
+                self._draw_control_status(frame, controls)
+                self._draw_hud(frame, camera, len(tracked))
+                if controls["recording"]:
+                    camera_controls.write_frame(camera_id, frame)
 
-            if frame_index % 20 == 0:
-                self.metrics.record_frame(camera_id, len(tracked))
+                if frame_index % 20 == 0:
+                    self.metrics.record_frame(camera_id, len(tracked))
 
-            encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 82])[1].tobytes()
-            yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + encoded + b"\r\n"
-            await asyncio.sleep(0.06)
+                encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 82])[1].tobytes()
+                yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + encoded + b"\r\n"
+                await asyncio.sleep(0.06)
+        finally:
+            self._release_capture(capture)
 
     @staticmethod
     def _get_camera(camera_id: int):
@@ -105,12 +135,43 @@ class VideoProcessor:
     def _open_capture(camera):
         if not camera:
             return None
-        source = int(camera["source"]) if camera["type"] == "webcam" and str(camera["source"]).isdigit() else camera["source"]
-        capture = cv2.VideoCapture(source)
+        source = VideoProcessor._capture_source(camera)
+        if camera["type"] in {"dss_client", "rtsp"}:
+            os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS", "rtsp_transport;tcp|stimeout;5000000|max_delay;500000")
+        api_preference = cv2.CAP_DSHOW if camera["type"] == "webcam" else cv2.CAP_FFMPEG
+        capture = cv2.VideoCapture(source, api_preference)
+        capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         if capture.isOpened():
-            with get_db() as conn:
-                conn.execute("UPDATE cameras SET status='online' WHERE id=?", (camera["id"],))
+            VideoProcessor._set_camera_status(camera["id"], "online")
+        else:
+            VideoProcessor._set_camera_status(camera["id"], "offline")
         return capture
+
+    @staticmethod
+    def _capture_source(camera):
+        return int(camera["source"]) if camera["type"] == "webcam" and str(camera["source"]).isdigit() else camera["source"]
+
+    @staticmethod
+    def _release_capture(capture) -> None:
+        if capture:
+            capture.release()
+
+    @staticmethod
+    def _set_camera_status(camera_id: int, status: str) -> None:
+        with get_db() as conn:
+            conn.execute("UPDATE cameras SET status=? WHERE id=?", (status, camera_id))
+
+    def _refresh_camera(self, camera_id: int, camera, capture):
+        current = self._get_camera(camera_id)
+        if not current:
+            self._release_capture(capture)
+            return None
+        if not camera:
+            return current
+        if current["type"] != camera["type"] or current["source"] != camera["source"]:
+            self._release_capture(capture)
+            return current
+        return camera
 
     async def _process_zones(self, camera_id: int, frame, zones: list[dict], detections: list[Detection]) -> None:
         height, width = frame.shape[:2]
@@ -241,12 +302,14 @@ class VideoProcessor:
         return cv2.resize(cropped, (width, height), interpolation=cv2.INTER_LINEAR)
 
     @staticmethod
-    def _mock_frame(camera_id: int, frame_index: int):
+    def _mock_frame(camera_id: int, frame_index: int, camera=None, message: str | None = None):
         frame = np.zeros((540, 960, 3), dtype=np.uint8)
         frame[:] = (236, 241, 243)
         cv2.rectangle(frame, (70, 270), (410, 505), (219, 235, 229), -1)
         cv2.rectangle(frame, (560, 95), (885, 410), (226, 231, 238), -1)
-        cv2.putText(frame, f"Camera {camera_id} em modo demonstrativo", (260, 72), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (30, 41, 54), 2)
+        title = camera["name"] if camera else f"Camera {camera_id}"
+        cv2.putText(frame, title, (260, 72), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (30, 41, 54), 2)
+        cv2.putText(frame, message or "Modo demonstrativo", (260, 112), cv2.FONT_HERSHEY_SIMPLEX, 0.72, (78, 91, 102), 2)
         return frame
 
     @staticmethod

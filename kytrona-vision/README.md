@@ -151,7 +151,7 @@ Video e tempo real:
 
 ## Como funciona
 
-O `video_processor.py` abre webcam, arquivo local, camera IP na rede ou RTSP com OpenCV. Para cameras IP, normalmente voce precisa informar a URL do stream, por exemplo `http://192.168.0.20:8080/video`, `http://192.168.0.30/mjpeg` ou `rtsp://usuario:senha@192.168.0.40:554/stream1`. Quando YOLO esta disponivel, `detection_service.py` detecta somente a classe `person`. Se nao houver camera ou modelo disponivel, o sistema gera frames demonstrativos para o dashboard nao quebrar.
+O `video_processor.py` abre webcam, arquivo local, camera IP na rede, RTSP ou perfil DSS Client/Dahua com OpenCV + FFmpeg. Para DSS/Dahua, o cadastro monta a URL RTSP no formato `rtsp://usuario:senha@servidor:9100/cam/realmonitor?channel=1&subtype=1`, usando RTSP/TCP como ponte para o MJPEG exibido no navegador. Para cameras IP comuns, normalmente voce precisa informar a URL do stream, por exemplo `http://192.168.0.20:8080/video`, `http://192.168.0.30/mjpeg` ou `rtsp://usuario:senha@192.168.0.40:554/stream1`. Quando YOLO esta disponivel, `detection_service.py` detecta somente a classe `person`. Se nao houver camera ou modelo disponivel, o sistema gera frames demonstrativos para o dashboard nao quebrar.
 
 O `tracking_service.py` mantem IDs temporarios anonimos entre frames e calcula permanencia por zona. O `alert_service.py` cria alertas comportamentais por area proibida, permanencia acima do limite, movimento fora do horario, fila/aglomeracao e entrada em zona critica.
 

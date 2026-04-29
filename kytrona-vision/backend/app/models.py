@@ -6,6 +6,7 @@ class CameraType(StrEnum):
     video_file = "video_file"
     ip_camera = "ip_camera"
     rtsp = "rtsp"
+    dss_client = "dss_client"
 
 
 class CameraStatus(StrEnum):

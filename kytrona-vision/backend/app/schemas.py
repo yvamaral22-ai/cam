@@ -9,7 +9,7 @@ from app.models import AlertSeverity, AlertStatus, CameraStatus, CameraType, Occ
 class CameraBase(BaseModel):
     name: str = Field(..., examples=["Webcam Local"])
     type: CameraType
-    source: str = Field(..., examples=["0", "videos/exemplo.mp4", "http://192.168.0.20:8080/video", "rtsp://usuario:senha@ip/stream"])
+    source: str = Field(..., examples=["0", "videos/exemplo.mp4", "http://192.168.0.20:8080/video", "rtsp://usuario:senha@ip:9100/cam/realmonitor?channel=1&subtype=1"])
     status: CameraStatus = CameraStatus.offline
     location: str | None = None
 

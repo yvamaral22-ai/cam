@@ -101,7 +101,13 @@ h2 { margin: 0; font-size: 17px; }
 .liveHeader em { font-style: normal; border-radius: 999px; padding: 5px 9px; font-size: 12px; }
 .liveHeader em.online { background: #e4f5ec; color: var(--green); }
 .liveHeader em.offline { background: #eef2f4; color: var(--muted); }
-.stream { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; background: #dfe8eb; }
+.stream { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; display: block; background: #111514; }
+.streamPlaceholder {
+  width: 100%; aspect-ratio: 16 / 9; background: #e8eff1; color: var(--muted);
+  display: grid; place-items: center; align-content: center; gap: 8px; text-align: center; padding: 18px;
+}
+.streamPlaceholder strong { color: var(--text); }
+.streamPlaceholder span { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; }
 .cardActions { display: grid; grid-template-columns: 1fr 44px; gap: 10px; padding: 14px; }
 .operateButton, .deleteButton {
   min-height: 40px; border: 1px solid var(--line);
@@ -118,6 +124,10 @@ input, select, textarea {
 }
 textarea { min-height: 86px; resize: vertical; padding: 10px 12px; }
 .fieldHelp { color: var(--muted); font-weight: 600; line-height: 1.35; }
+.dssFields {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+  border: 1px solid var(--line); border-radius: 8px; background: #f8fbfb; padding: 12px;
+}
 .formFeedback {
   border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.35; font-weight: 700;
 }
@@ -145,7 +155,7 @@ textarea { min-height: 86px; resize: vertical; padding: 10px 12px; }
   border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--text); padding: 9px 12px;
   font-weight: 800;
 }
-.consoleStream { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #dfe8eb; border-radius: 8px; }
+.consoleStream { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #111514; border-radius: 8px; }
 .cameraToolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .cameraToolbar button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; }
 .cameraToolbar input[type="range"] { max-width: 180px; min-height: 36px; padding: 0; }
@@ -195,7 +205,7 @@ textarea { min-height: 86px; resize: vertical; padding: 10px 12px; }
 }
 .zonePreviewCopy { display: grid; gap: 4px; }
 .zonePreviewCopy small { color: var(--muted); }
-.zonePreviewStream { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; background: #dfe8eb; }
+.zonePreviewStream { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; border-radius: 8px; background: #111514; }
 .zoneBoard { display: grid; gap: 16px; }
 .zoneGroup {
   background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px;
@@ -255,11 +265,430 @@ textarea { min-height: 86px; resize: vertical; padding: 10px 12px; }
 .watchlistItem span, .watchlistItem small { color: var(--muted); }
 .watchlistItem strong { color: var(--text); }
 
+.monitorPage {
+  --monitor-bg: #eef2ea;
+  --monitor-panel: #fffdf8;
+  --monitor-panel-2: #f5f0e7;
+  --monitor-line: #d6ddcf;
+  --monitor-text: #17231f;
+  --monitor-muted: #647169;
+  --monitor-accent: #007c74;
+  --monitor-accent-2: #d17732;
+  --monitor-danger: #c84a4a;
+  --monitor-video: #111514;
+  display: grid;
+  grid-template-columns: minmax(280px, 336px) minmax(0, 1fr);
+  grid-template-rows: minmax(280px, auto) minmax(300px, 1fr);
+  grid-template-areas:
+    "rail stage"
+    "inspector stage";
+  gap: 14px;
+  min-height: calc(100vh - 116px);
+  padding: 14px;
+  background:
+    linear-gradient(135deg, rgba(0, 124, 116, 0.08), transparent 34%),
+    linear-gradient(315deg, rgba(209, 119, 50, 0.08), transparent 28%),
+    var(--monitor-bg);
+  border: 1px solid var(--monitor-line);
+  border-radius: 8px;
+  overflow: visible;
+  box-shadow: 0 20px 45px rgba(23, 35, 31, 0.12);
+}
+.monitorPage button { border: 0; }
+.monitorRail, .monitorInspector, .monitorStage {
+  min-width: 0;
+  color: var(--monitor-text);
+  border: 1px solid var(--monitor-line);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 12px 26px rgba(23, 35, 31, 0.08);
+}
+.monitorRail {
+  grid-area: rail;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(160px, 1fr) auto;
+  background: var(--monitor-panel);
+  min-height: 0;
+}
+.monitorInspector {
+  grid-area: inspector;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--monitor-panel);
+  min-height: 0;
+}
+.monitorStage {
+  grid-area: stage;
+  display: grid;
+  grid-template-rows: auto auto minmax(420px, 1fr);
+  background: #f8f7f1;
+  min-height: 650px;
+}
+.monitorBrand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  background: linear-gradient(90deg, #17332f, #205048);
+  color: #fffdf8;
+}
+.monitorBrand svg { color: #f0a64c; }
+.monitorBrand strong, .monitorBrand span { display: block; }
+.monitorBrand span { color: #d5e5df; font-size: 13px; margin-top: 2px; }
+.resourceTabs, .inspectorTabs, .modeTabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  background: var(--monitor-panel-2);
+}
+.resourceTabs button, .inspectorTabs button, .modeTabs button {
+  min-height: 46px;
+  background: transparent;
+  color: var(--monitor-muted);
+  font-weight: 800;
+  border-bottom: 1px solid var(--monitor-line);
+}
+.resourceTabs button.active, .inspectorTabs button.active, .modeTabs button.active {
+  color: var(--monitor-accent);
+  background: #fffdf8;
+  box-shadow: inset 0 -3px 0 var(--monitor-accent);
+}
+.resourceSearch {
+  margin: 14px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--monitor-line);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--monitor-muted);
+  background: #fff;
+}
+.resourceSearch input {
+  min-height: 42px;
+  background: transparent;
+  border: 0;
+  color: var(--monitor-text);
+  padding: 0;
+}
+.resourceTree { min-height: 0; overflow: auto; padding: 0 12px 12px; }
+.treeRoot {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--monitor-text);
+  text-align: left;
+  font-weight: 800;
+}
+.cameraResourceList { display: grid; gap: 8px; }
+.cameraResource {
+  display: grid;
+  grid-template-columns: 1fr 34px 34px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--monitor-line);
+  border-radius: 8px;
+  background: #fbfaf5;
+}
+.cameraResource.active {
+  border-color: rgba(0, 124, 116, 0.45);
+  background: #edf7f4;
+  box-shadow: inset 3px 0 0 var(--monitor-accent);
+}
+.cameraResourceMain {
+  min-width: 0;
+  background: transparent;
+  color: var(--monitor-text);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+  padding: 10px;
+}
+.cameraResourceMain span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cameraResourceMain small {
+  grid-column: 2;
+  color: var(--monitor-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.favorite, .resourceDelete {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--monitor-muted);
+}
+.favorite.active { color: #c98b13; }
+.resourceDelete:hover { color: var(--monitor-danger); background: #fff1ee; }
+.monitorAccordion {
+  display: grid;
+  border-top: 1px solid var(--monitor-line);
+  background: var(--monitor-panel-2);
+}
+.monitorAccordion button {
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 9px;
+  background: transparent;
+  color: var(--monitor-text);
+  padding: 0 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--monitor-line);
+  font-size: 16px;
+}
+.monitorTopbar {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 16px;
+  background: #fffdf8;
+  border-bottom: 1px solid var(--monitor-line);
+}
+.modeTabs {
+  width: min(320px, 100%);
+  border: 1px solid var(--monitor-line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.modeTabs button { min-height: 42px; border-bottom: 0; border-right: 1px solid var(--monitor-line); }
+.modeTabs button:last-child { border-right: 0; }
+.monitorClock { display: flex; align-items: center; gap: 10px; color: var(--monitor-text); font-size: 18px; font-weight: 800; }
+.monitorToolbar {
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 16px;
+  background: #f2efe6;
+  border-bottom: 1px solid var(--monitor-line);
+}
+.layoutButtons, .monitorActions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.layoutButtons button, .monitorActions button {
+  min-height: 38px;
+  border-radius: 8px;
+  background: #fffdf8;
+  color: var(--monitor-muted);
+  border: 1px solid var(--monitor-line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 10px;
+  font-weight: 800;
+}
+.layoutButtons button.active, .layoutButtons button:hover, .monitorActions button:hover {
+  background: #e8f5f2;
+  color: var(--monitor-accent);
+  border-color: rgba(0, 124, 116, 0.35);
+}
+.videoWall {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  height: 100%;
+  background: var(--monitor-video);
+  padding: 8px;
+}
+.videoWall1 .videoPane { min-height: 560px; }
+.videoWall4 .videoPane { min-height: 300px; }
+.videoWall9 .videoPane { min-height: 210px; }
+.videoWall16 .videoPane { min-height: 160px; }
+.videoPane {
+  position: relative;
+  min-width: 0;
+  min-height: 180px;
+  background: #0c100f;
+  border: 2px solid #202825;
+  border-radius: 6px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+.videoPane.active {
+  border-color: var(--monitor-accent-2);
+  box-shadow: 0 0 0 2px rgba(209, 119, 50, 0.22);
+}
+.paneHeader {
+  min-height: 32px;
+  display: grid;
+  grid-template-columns: 28px 1fr 30px;
+  align-items: center;
+  gap: 6px;
+  background: #18221f;
+  color: #f8faf7;
+  border-bottom: 1px solid #2c3733;
+  padding: 5px 8px;
+}
+.paneHeader button {
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  color: #dbe2dd;
+}
+.paneHeader span { color: #f0a64c; font-weight: 900; }
+.paneHeader strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.paneStream {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  background: #050706;
+}
+.panePlaceholder {
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  color: #3c4642;
+  text-align: center;
+  padding: 20px;
+}
+.panePlaceholder strong { color: #8c968f; font-size: 16px; }
+.panePlaceholder span { color: #707b74; font-size: 13px; }
+.monitorForm, .monitorControls {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 14px;
+  overflow: auto;
+  min-height: 0;
+}
+.monitorForm label, .monitorControls label { color: var(--monitor-muted); }
+.monitorForm input, .monitorForm select, .monitorControls input, .monitorControls select {
+  background: #fff;
+  border-color: var(--monitor-line);
+  color: var(--monitor-text);
+}
+.monitorDssFields {
+  background: #f6f8f0;
+  border-color: var(--monitor-line);
+}
+.inspectorTitle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--monitor-text);
+}
+.inspectorTitle h2 { margin: 0; }
+.inspectorTitle span { display: block; color: var(--monitor-muted); font-size: 12px; margin-top: 5px; overflow-wrap: anywhere; }
+.inspectorTitle button {
+  background: transparent;
+  color: var(--monitor-muted);
+  display: grid;
+  place-items: center;
+}
+.inspectorTitle.small { align-items: center; }
+.controlCluster {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+.controlCluster button, .monitorButtonGrid button {
+  min-height: 40px;
+  border-radius: 8px;
+  background: #f5f0e7;
+  color: var(--monitor-text);
+  border: 1px solid var(--monitor-line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 10px;
+  font-weight: 800;
+}
+.controlCluster strong { color: var(--monitor-accent); text-align: center; }
+.monitorButtonGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.monitorButtonGrid button.activeDanger { background: #fff1ee; color: var(--monitor-danger); border-color: #f3c8c1; }
+.monitorInfo {
+  display: grid;
+  gap: 8px;
+  color: var(--monitor-muted);
+  font-size: 13px;
+}
+.monitorDetectionForm { display: grid; gap: 10px; border-top: 1px solid var(--monitor-line); padding-top: 12px; }
+.monitorRules { display: grid; gap: 8px; }
+.monitorRules article {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--monitor-line);
+  border-radius: 8px;
+  padding: 9px;
+  color: var(--monitor-text);
+  background: #fbfaf5;
+}
+.monitorRules span { display: block; color: var(--monitor-muted); font-size: 12px; margin-top: 3px; }
+.monitorRules button {
+  min-height: 34px;
+  border-radius: 8px;
+  background: #f5f0e7;
+  color: var(--monitor-text);
+  border: 1px solid var(--monitor-line);
+  padding: 7px 9px;
+  font-weight: 800;
+}
+.monitorEmpty {
+  border: 1px dashed var(--monitor-line);
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--monitor-muted);
+  background: rgba(255, 253, 248, 0.72);
+}
+
+@media (max-width: 1280px) {
+  .monitorPage {
+    grid-template-columns: minmax(260px, 304px) minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px;
+  }
+  .monitorStage { min-height: 600px; }
+  .monitorActions button { padding: 8px; }
+}
+
 @media (max-width: 1080px) {
   .metrics, .cameraGrid, .contentGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .splitPage, .zonesPage { grid-template-columns: 1fr; }
   .zoneEditor { position: static; }
   .zonePreview { grid-template-columns: 1fr; }
+  .monitorPage {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(520px, auto) auto;
+    grid-template-areas:
+      "rail"
+      "stage"
+      "inspector";
+  }
+  .monitorRail {
+    grid-template-rows: auto auto auto minmax(120px, auto) auto;
+  }
+  .resourceTree { max-height: 320px; }
+  .monitorInspector { min-height: auto; }
+  .monitorForm, .monitorControls { max-height: none; }
+  .monitorStage { min-height: 520px; }
 }
 
 @media (max-width: 760px) {
@@ -269,8 +698,38 @@ textarea { min-height: 86px; resize: vertical; padding: 10px 12px; }
   .main { padding: 18px; }
   .topbar { align-items: flex-start; flex-direction: column; }
   .metrics, .cameraGrid, .contentGrid { grid-template-columns: 1fr; }
-  .inlineForm, .ruleItem, .zoneEditorGrid, .coordinateGrid, .formActions { grid-template-columns: 1fr; }
+  .inlineForm, .ruleItem, .zoneEditorGrid, .coordinateGrid, .formActions, .dssFields { grid-template-columns: 1fr; }
   .alertRow, .tableRow, .occurrenceTop, .watchlistGrid { grid-template-columns: 1fr; }
   .zoneOverview { align-items: stretch; flex-direction: column; }
   .zoneOverview select { max-width: none; }
+  .monitorPage {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "stage"
+      "rail"
+      "inspector";
+    min-height: 0;
+    padding: 10px;
+  }
+  .monitorStage {
+    min-height: 0;
+    grid-template-rows: auto auto auto;
+  }
+  .monitorRail { border-right: 0; border-bottom: 1px solid var(--monitor-line); }
+  .monitorTopbar, .monitorToolbar { align-items: stretch; flex-direction: column; }
+  .modeTabs { width: 100%; }
+  .monitorClock { font-size: 16px; }
+  .layoutButtons, .monitorActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .layoutButtons button, .monitorActions button { width: 100%; }
+  .videoWall {
+    grid-template-columns: 1fr !important;
+    height: auto;
+    min-height: 0;
+  }
+  .videoPane, .panePlaceholder { min-height: 220px; }
+  .monitorButtonGrid, .monitorRules article, .controlCluster { grid-template-columns: 1fr; }
+  .cameraResource { grid-template-columns: 1fr 36px; }
+  .resourceDelete { grid-column: 2; }
+  .favorite { grid-column: 2; grid-row: 1; }
 }

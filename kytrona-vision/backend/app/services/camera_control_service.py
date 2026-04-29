@@ -72,6 +72,12 @@ class CameraControlService:
         state.last_message = "Gravacao parada"
         return asdict(state)
 
+    def remove(self, camera_id: int) -> None:
+        writer = self.recorders.pop(camera_id, None)
+        if writer:
+            writer.release()
+        self.controls.pop(camera_id, None)
+
     def request_recording(self, camera_id: int) -> dict:
         state = self._state(camera_id)
         state.recording_requested = True

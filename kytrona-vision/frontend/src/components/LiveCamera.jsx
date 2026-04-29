@@ -1,5 +1,4 @@
-import { api } from '../api/client';
-import { Trash2 } from 'lucide-react';
+import { Radio, Trash2, Video } from 'lucide-react';
 
 export default function LiveCamera({ camera, onOpen, onDelete, zoneCount }) {
   return (
@@ -12,15 +11,21 @@ export default function LiveCamera({ camera, onOpen, onDelete, zoneCount }) {
         </div>
         <em className={camera.status === 'online' ? 'online' : 'offline'}>{camera.status}</em>
       </div>
-      <img className="stream" src={api.streamUrl(camera.id)} alt={`Stream processado de ${camera.name}`} />
-      <div className="cardActions">
-        {onOpen && <button className="operateButton" onClick={() => onOpen(camera)}>Operar camera</button>}
-        {onDelete && (
-          <button className="deleteButton" title="Excluir camera" onClick={() => onDelete(camera)}>
-            <Trash2 size={17} />
-          </button>
-        )}
+      <div className="streamPlaceholder">
+        <Video size={30} />
+        <strong>Preview pausado</strong>
+        <span><Radio size={15} /> Abra a camera para iniciar o stream</span>
       </div>
+      {(onOpen || onDelete) && (
+        <div className="cardActions">
+          {onOpen && <button className="operateButton" onClick={() => onOpen(camera)}>Operar camera</button>}
+          {onDelete && (
+            <button className="deleteButton" title="Excluir camera" onClick={() => onDelete(camera)}>
+              <Trash2 size={17} />
+            </button>
+          )}
+        </div>
+      )}
     </article>
   );
 }
